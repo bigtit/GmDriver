@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Driver Files">
+      <UniqueIdentifier>{8E41214B-6785-4CFE-B992-037D68949A14}</UniqueIdentifier>
+      <Extensions>inf;inv;inx;mof;mc;</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Driver Files\Common.h">
+      <Filter>Driver Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Driver Files\GmDriver.c">
+      <Filter>Driver Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Driver Files\Common.c">
+      <Filter>Driver Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
