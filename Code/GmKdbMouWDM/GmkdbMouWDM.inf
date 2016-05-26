@@ -1,0 +1,32 @@
+;
+; GmkdbMouWDM.inf
+;
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=Akira
+ClassGuid={DAAC551C-D0AE-435B-A40A-7419B2BCB95B}
+Provider=Akira_Device
+DriverVer=
+CatalogFile=MyTest.cat
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+
+
+[Manufacturer]
+%ManufacturerName%=Standard,NT$ARCH$
+
+[Standard.NT$ARCH$]
+
+
+[Strings]
+ManufacturerName=""
+ClassName=""
+DiskName="GmkdbMouWDM Source Disk"
