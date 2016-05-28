@@ -56,7 +56,7 @@ NTSTATUS GmKMClassControlDispatch(IN PDEVICE_OBJECT pDeviceObject, IN PIRP pIRP)
 	PVOID pIOBuffer = pIRP->AssociatedIrp.SystemBuffer;
 	if (!pIOBuffer)
 	{
-		KdPrint(("WTF?! The IOBuffer Is NULL?!"));
+		KdPrint(("GmKMClass[控制分发函数]见鬼了，缓冲区是空指针...\n"));
 		goto Exit;
 	}
 
@@ -67,7 +67,7 @@ NTSTATUS GmKMClassControlDispatch(IN PDEVICE_OBJECT pDeviceObject, IN PIRP pIRP)
 	{
 		if (pIRPStack->Parameters.DeviceIoControl.InputBufferLength != sizeof(KEYBOARD_INPUT_DATA))
 		{
-			KdPrint(("The Keyboard Input Data Size Is Not Equal sizeof(KEYBOARD_INPUT_DATA)..."));
+			KdPrint(("GmKMClass[控制分发函数]给的键盘数据大小不对...\n"));
 			nStatus = STATUS_INVALID_PARAMETER;
 			goto Exit;
 		}
@@ -79,7 +79,7 @@ NTSTATUS GmKMClassControlDispatch(IN PDEVICE_OBJECT pDeviceObject, IN PIRP pIRP)
 	{
 		if (pIRPStack->Parameters.DeviceIoControl.InputBufferLength != sizeof(MOUSE_INPUT_DATA))
 		{
-			KdPrint(("The Mouse Input Data Size Is Not Equal sizeof(MOUSE_INPUT_DATA)..."));
+			KdPrint(("GmKMClass[控制分发函数]给的鼠标数据大小不对...\n"));
 			nStatus = STATUS_INVALID_PARAMETER;
 			goto Exit;
 		}
@@ -89,7 +89,7 @@ NTSTATUS GmKMClassControlDispatch(IN PDEVICE_OBJECT pDeviceObject, IN PIRP pIRP)
 	}
 	else
 	{
-		KdPrint(("Are You Fuking Kidding Me?..."));
+		KdPrint(("GmKMClass[控制分发函数]出现了未定义的控制代码...\n"));
 		nStatus = STATUS_INVALID_PARAMETER;
 		goto Exit;
 	}
@@ -108,7 +108,7 @@ VOID DriverUnload(IN PDRIVER_OBJECT pDriverObject)
 	IoDeleteSymbolicLink(&SymbolicName);
 	// 卸载控制设备
 	IoDeleteDevice(pDriverObject->DeviceObject);
-	KdPrint(("GmKMClass Driver Unload Success..."));
+	KdPrint(("GmKMClass驱动卸载成功...\n"));
 }
 
 // 驱动入口
@@ -117,7 +117,7 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING pRegist
 	// 未使用参数
 	(VOID)(pRegistryPath);
 	NTSTATUS nStatus = STATUS_UNSUCCESSFUL;
-	KdPrint(("Driver Entry..."));
+	KdPrint(("GmKMClass键盘鼠标模拟驱动开始尝试加载...\n"));
 	
 	// 设置驱动卸载函数
 	pDriverObject->DriverUnload = DriverUnload;
@@ -139,7 +139,7 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING pRegist
 	nStatus = IoCreateDevice(pDriverObject, sizeof(ControlDeviceExtension), &ControlDeviceName, CTL_DEVICE_TYPE, 0, FALSE, &pControlDeviceObject);
 	if (!NT_SUCCESS(nStatus))
 	{
-		KdPrint(("IoCreateDevice Fail...Status = %ld", nStatus));
+		KdPrint(("GmKMClass创建控制设备对象失败，返回错误码 = 0x%08X\n", nStatus));
 		return nStatus;
 	}
 	// 设置域
@@ -151,7 +151,7 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING pRegist
 	nStatus = SearchKeyboardClassServiceCallbackAddress(pControlDeviceObject);
 	if (!NT_SUCCESS(nStatus))
 	{
-		KdPrint(("Can't Find The Keyboard Callback..."));
+		KdPrint(("GmKMClass没有找到键盘的回调函数...\n"));
 		IoDeleteDevice(pControlDeviceObject);
 		pControlDeviceObject = NULL;
 		return nStatus;
@@ -161,7 +161,7 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING pRegist
 	nStatus = SearchMouseClassServiceCallback(pControlDeviceObject);
 	if (!NT_SUCCESS(nStatus))
 	{
-		KdPrint(("Can't Find The Mouse Callback..."));
+		KdPrint(("GmKMClass没有找到鼠标的回调函数...\n"));
 		IoDeleteDevice(pControlDeviceObject);
 		pControlDeviceObject = NULL;
 		return nStatus;
@@ -172,14 +172,14 @@ NTSTATUS DriverEntry(IN PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING pRegist
 	nStatus = IoCreateSymbolicLink(&SymbolicName, &ControlDeviceName);
 	if (!NT_SUCCESS(nStatus))
 	{
-		KdPrint(("Can't Create The Symbolic Link..."));
+		KdPrint(("GmKMClass创建链接符号失败，返回错误码 = 0x%08X...\n", nStatus));
 		IoDeleteDevice(pControlDeviceObject);
 		pControlDeviceObject = NULL;
 		return nStatus;
 	}
 
 	// 设置初始化域
-	KdPrint(("Driver Load Success..."));
+	KdPrint(("GmKMClass驱动加载成功！\n"));
 	pControlDeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
 	return STATUS_SUCCESS;
 }
