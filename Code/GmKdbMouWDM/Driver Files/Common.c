@@ -117,23 +117,23 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 					break;
 				}
 
-				// 当成一个指针取值
-				PVOID pTemPtr = *(PVOID*)pDeviceExtension;
 				// 找到一个地址，这个地址保存着一个指针，一个属于KbdClasss驱动对象的设备对象指针
-				if (pTemPtr == pCurClassDevice)
+				PDEVICE_OBJECT pTempDevice = *(PVOID*)pDeviceExtension;
+				if (pTempDevice != pCurClassDevice)
 				{
-					KdPrint(("GmKMClass[键盘]找到被保存的[%wZ]设备对象*[%p] = [%p]...\n", pCurClassDevice->DriverObject->DriverName, pDeviceExtension, pTemPtr));
-					pControlDeviceExtension->m_pKeyboradDeviceObject = pTemPtr;
 					continue;
 				}
 
-				// 先找到KbdClasss驱动的设备对象再找后面的函数指针，找到了设备指针后，找到一个地址，这个地址保存着一个函数指针，一个位于KbdClasss驱动对象的内存空间里的指针
-				if (pControlDeviceExtension->m_pKeyboradDeviceObject && IsInAddress(pTemPtr, pClassDriverStart, nClassDriverSize) && MmIsAddressValid(pTemPtr))
+				PVOID pTempCallback = *((PVOID*)(pDeviceExtension + sizeof(PVOID)));
+				if (IsInAddress(pTempCallback, pClassDriverStart, nClassDriverSize) && MmIsAddressValid(pTempCallback))
 				{
-					KdPrint(("GmKMClass[键盘]找到被保存的回调函数*[%p] = [%p]...\n", pDeviceExtension, pTemPtr));
-					pControlDeviceExtension->m_pfnKeyboardClassServiceCallback = *((KeyboardClassServiceCallback*)pDeviceExtension);
+					KdPrint(("GmKMClass[键盘]找到[%p]保存着[%wZ]设备对象[%p]和回调函数[%p]...\n", pDeviceExtension, pCurClassDevice->DriverObject->DriverName, pTempDevice, pTempCallback));
+					pControlDeviceExtension->m_pKeyboradDeviceObject = pCurClassDevice;
+					pControlDeviceExtension->m_pfnKeyboardClassServiceCallback = *((KeyboardClassServiceCallback*)(pDeviceExtension + sizeof(PVOID)));
 					return STATUS_SUCCESS;
 				}
+
+				KdPrint(("GmKMClass[键盘]找到[%p]保存的[%wZ]设备对象，但是后面不是回调函数...\n", pDeviceExtension, pCurClassDevice->DriverObject->DriverName));
 			} // 这个扩展地址没有往下偏移一个指针再试试
 		} // 这个KbdClass的设备对象没有被pLowerDevice的自定义扩展所保存，所以不是想要的那个设备对象，下一个KbdClass设备对象
 	} // 这个pLowerDevice设备对象就没有保存任何KbdClass设备对象，下一个端口设备对象继续找pLowerDevice
@@ -218,23 +218,23 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 					break;
 				}
 
-				// 当成一个指针取值
-				PVOID pTemPtr = *(PVOID*)pDeviceExtension;
 				// 找到一个地址，这个地址保存着一个指针，一个属于KbdClasss驱动对象的设备对象指针
-				if (pTemPtr == pCurClassDevice)
+				PDEVICE_OBJECT pTempDevice = *(PVOID*)pDeviceExtension;
+				if (pTempDevice != pCurClassDevice)
 				{
-					KdPrint(("GmKMClass[鼠标]找到被保存的[%wZ]设备对象*[%p] = [%p]...\n", pCurClassDevice->DriverObject->DriverName, pDeviceExtension, pTemPtr));
-					pControlDeviceExtension->m_pMouseDeviceObject = pCurClassDevice;
 					continue;
 				}
 
-				// 先找到MouClass驱动的设备对象再找后面的函数指针，找到了设备指针后，找到一个地址，这个地址保存着一个函数指针，一个位于MouClass驱动对象的内存空间里的指针
-				if (pControlDeviceExtension->m_pMouseDeviceObject && IsInAddress(pTemPtr, pClassDriverStart, nClassDriverSize) && MmIsAddressValid(pTemPtr))
+				PVOID pTempCallback = *((PVOID*)(pDeviceExtension + sizeof(PVOID)));
+				if (IsInAddress(pTempCallback, pClassDriverStart, nClassDriverSize) && MmIsAddressValid(pTempCallback))
 				{
-					KdPrint(("GmKMClass[鼠标]找到被保存的回调函数*[%p] = [%p]...\n", pDeviceExtension, pTemPtr));
-					pControlDeviceExtension->m_pfnMouseClassServiceCallback = *((MouseClassServiceCallback*)pDeviceExtension);
+					KdPrint(("GmKMClass[鼠标]找到[%p]保存着[%wZ]设备对象[%p]和回调函数[%p]...\n", pDeviceExtension, pCurClassDevice->DriverObject->DriverName, pTempDevice, pTempCallback));
+					pControlDeviceExtension->m_pMouseDeviceObject = pCurClassDevice;
+					pControlDeviceExtension->m_pfnMouseClassServiceCallback = *((MouseClassServiceCallback*)(pDeviceExtension + sizeof(PVOID)));
 					return STATUS_SUCCESS;
 				}
+
+				KdPrint(("GmKMClass[鼠标]找到[%p]保存的[%wZ]设备对象，但是后面不是回调函数...\n", pDeviceExtension, pCurClassDevice->DriverObject->DriverName));
 			} // 这个扩展地址没有往下偏移一个指针再试试
 		} // 这个MouClass的设备对象没有被pLowerDevice的自定义扩展所保存，所以不是想要的那个设备对象，下一个MouClass设备对象
 	} // 这个pLowerDevice设备对象就没有保存任何MouClass设备对象，下一个端口设备对象继续找pLowerDevice
