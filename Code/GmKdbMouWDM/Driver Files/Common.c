@@ -85,43 +85,56 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 		PDEVICE_OBJECT pLowerDevice = pCurPortDevice;
 		while (pLowerDevice->AttachedDevice)
 		{
-			KdPrint(("GmKMClasss[键盘]开始搜索[%wZ]第[%d]个设备栈上的[%wZ]设备对象...", pCurPortDevice->DriverObject->DriverName, pCurPortDevice->StackSize, pLowerDevice->DriverObject->DriverName));
-			for (PDEVICE_OBJECT pCurClassDevice = pClassDriver->DeviceObject; pCurClassDevice; pCurClassDevice = pCurClassDevice->NextDevice)
+			if (RtlCompareUnicodeString(&pLowerDevice->AttachedDevice->DriverObject->DriverName, &ClassDriverName, TRUE) == 0)
 			{
-				// 先清空
-				pControlDeviceExtension->m_pKeyboradDeviceObject = NULL;
-				pControlDeviceExtension->m_pfnKeyboardClassServiceCallback = NULL;
-				// 遍历这个设备对象的自定义扩展内容，我们需要的东西就在这里面保存着
-				PCHAR pDeviceExtension = (PCHAR)pLowerDevice->DeviceExtension;
-				for (INT i = 0; i < 4096; ++i, pDeviceExtension += sizeof(PVOID))
-				{
-					// 内存不合法
-					if (!MmIsAddressValid(pDeviceExtension))
-					{
-						KdPrint(("GmKMClass[键盘]这个地址[%p]不合法...\n", pDeviceExtension));
-						break;
-					}
-
-					// 找到一个地址，这个地址保存着一个指针，一个属于KbdClasss驱动对象的设备对象指针
-					PDEVICE_OBJECT pTempDevice = *(PVOID*)pDeviceExtension;
-					if (pTempDevice != pCurClassDevice)
-					{
-						continue;
-					}
-
-					PVOID pTempCallback = *((PVOID*)(pDeviceExtension + sizeof(PVOID)));
-					if (IsInAddress(pTempCallback, pClassDriverStart, nClassDriverSize) && MmIsAddressValid(pTempCallback))
-					{
-						KdPrint(("GmKMClass[键盘]找到[%p]保存着[%wZ]设备对象[%p]和回调函数[%p]...\n", pDeviceExtension, pCurClassDevice->DriverObject->DriverName, pTempDevice, pTempCallback));
-						pControlDeviceExtension->m_pKeyboradDeviceObject = pCurClassDevice;
-						pControlDeviceExtension->m_pfnKeyboardClassServiceCallback = *((KeyboardClassServiceCallback*)(pDeviceExtension + sizeof(PVOID)));
-						return STATUS_SUCCESS;
-					}
-
-					KdPrint(("GmKMClass[键盘]找到[%p]保存的[%wZ]设备对象，但是后面不是回调函数...\n", pDeviceExtension, pCurClassDevice->DriverObject->DriverName));
-				}
-			} // 这个扩展地址没有往下偏移一个指针再试试
+				KdPrint(("GmKMClass[键盘]找到最靠近KbdClasss驱动的设备对象[%wZ]...\n", pLowerDevice->DriverObject->DriverName));
+				break;
+			}
 			pLowerDevice = pLowerDevice->AttachedDevice;
+		}
+
+		// 已经找到设备栈顶了，也没有找到最靠近KbdClasss设备对象的设备对象
+		if (!pLowerDevice->AttachedDevice)
+		{
+			KdPrint(("GmKMClass[键盘]这个设备[当前%wZ][栈顶%wZ]所处的设备栈里没有找到合适的设备对象...\n", pCurPortDevice->DriverObject->DriverName, pLowerDevice->DriverObject->DriverName));
+			continue;
+		}
+		
+		// 开始在pLowerDevice的自定义扩展中找回调函数和设备对象指针
+		for (PDEVICE_OBJECT pCurClassDevice = pClassDriver->DeviceObject; pCurClassDevice; pCurClassDevice = pCurClassDevice->NextDevice)
+		{
+			// 先清空
+			pControlDeviceExtension->m_pKeyboradDeviceObject = NULL;
+			pControlDeviceExtension->m_pfnKeyboardClassServiceCallback = NULL;
+			// 遍历这个设备对象的自定义扩展内容，我们需要的东西就在这里面保存着
+			PCHAR pDeviceExtension = (PCHAR)pLowerDevice->DeviceExtension;
+			for (INT i = 0; i < 4096; ++i, pDeviceExtension += sizeof(PVOID))
+			{
+				// 内存不合法
+				if (!MmIsAddressValid(pDeviceExtension))
+				{
+					KdPrint(("GmKMClass[键盘]这个地址[%p]不合法...\n", pDeviceExtension));
+					break;
+				}
+
+				// 找到一个地址，这个地址保存着一个指针，一个属于KbdClasss驱动对象的设备对象指针
+				PDEVICE_OBJECT pTempDevice = *(PVOID*)pDeviceExtension;
+				if (pTempDevice != pCurClassDevice)
+				{
+					continue;
+				}
+
+				PVOID pTempCallback = *((PVOID*)(pDeviceExtension + sizeof(PVOID)));
+				if (IsInAddress(pTempCallback, pClassDriverStart, nClassDriverSize) && MmIsAddressValid(pTempCallback))
+				{
+					KdPrint(("GmKMClass[键盘]找到[%p]保存着[%wZ]设备对象[%p]和回调函数[%p]...\n", pDeviceExtension, pCurClassDevice->DriverObject->DriverName, pTempDevice, pTempCallback));
+					pControlDeviceExtension->m_pKeyboradDeviceObject = pCurClassDevice;
+					pControlDeviceExtension->m_pfnKeyboardClassServiceCallback = *((KeyboardClassServiceCallback*)(pDeviceExtension + sizeof(PVOID)));
+					return STATUS_SUCCESS;
+				}
+
+				KdPrint(("GmKMClass[键盘]找到[%p]保存的[%wZ]设备对象，但是后面不是回调函数...\n", pDeviceExtension, pCurClassDevice->DriverObject->DriverName));
+			} // 这个扩展地址没有往下偏移一个指针再试试
 		} // 这个KbdClass的设备对象没有被pLowerDevice的自定义扩展所保存，所以不是想要的那个设备对象，下一个KbdClass设备对象
 	} // 这个pLowerDevice设备对象就没有保存任何KbdClass设备对象，下一个端口设备对象继续找pLowerDevice
 
