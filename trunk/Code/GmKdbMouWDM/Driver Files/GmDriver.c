@@ -65,33 +65,52 @@ NTSTATUS GmKMClassControlDispatch(IN PDEVICE_OBJECT pDeviceObject, IN PIRP pIRP)
 	ULONG nCtlCode = pIRPStack->Parameters.DeviceIoControl.IoControlCode;
 	if (nCtlCode == KBD_CTL_CODE)
 	{
-		if (pIRPStack->Parameters.DeviceIoControl.InputBufferLength != sizeof(KEYBOARD_INPUT_DATA))
+		if (pIRPStack->Parameters.DeviceIoControl.InputBufferLength == sizeof(KEYBOARD_INPUT_DATA))
+		{
+			PKEYBOARD_INPUT_DATA pKbdInput = (PKEYBOARD_INPUT_DATA)pIOBuffer;
+			PKEYBOARD_INPUT_DATA pEndInput = pKbdInput + 1;
+			pCtlDeviceExt->m_pfnKeyboardClassServiceCallback(pCtlDeviceExt->m_pKeyboradDeviceObject, pKbdInput, pEndInput, &nInputConsumed);
+			nStatus = STATUS_SUCCESS;
+		}
+		else if (pIRPStack->Parameters.DeviceIoControl.InputBufferLength % sizeof(KEYBOARD_INPUT_DATA) == 0)
+		{
+			PKEYBOARD_INPUT_DATA pKbdInput = (PKEYBOARD_INPUT_DATA)pIOBuffer;
+			PKEYBOARD_INPUT_DATA pEndInput = pKbdInput + pIRPStack->Parameters.DeviceIoControl.InputBufferLength / sizeof(KEYBOARD_INPUT_DATA);
+			pCtlDeviceExt->m_pfnKeyboardClassServiceCallback(pCtlDeviceExt->m_pKeyboradDeviceObject, pKbdInput, pEndInput, &nInputConsumed);
+			nStatus = STATUS_SUCCESS;
+		}
+		else
 		{
 			KdPrint(("GmKMClass[控制分发函数]给的键盘数据大小不对...\n"));
 			nStatus = STATUS_INVALID_PARAMETER;
-			goto Exit;
 		}
-		PKEYBOARD_INPUT_DATA pKbdInput = (PKEYBOARD_INPUT_DATA)pIOBuffer;
-		pCtlDeviceExt->m_pfnKeyboardClassServiceCallback(pCtlDeviceExt->m_pKeyboradDeviceObject, pKbdInput, pKbdInput + 1, &nInputConsumed);
-		nStatus = STATUS_SUCCESS;
 	}
 	else if (nCtlCode == MOU_CTL_CODE)
 	{
-		if (pIRPStack->Parameters.DeviceIoControl.InputBufferLength != sizeof(MOUSE_INPUT_DATA))
+		if (pIRPStack->Parameters.DeviceIoControl.InputBufferLength == sizeof(MOUSE_INPUT_DATA))
+		{
+			PMOUSE_INPUT_DATA pMouInput = (PMOUSE_INPUT_DATA)pIOBuffer;
+			PMOUSE_INPUT_DATA pEndInput = pMouInput + 1;
+			pCtlDeviceExt->m_pfnMouseClassServiceCallback(pCtlDeviceExt->m_pMouseDeviceObject, pMouInput, pEndInput, &nInputConsumed);
+			nStatus = STATUS_SUCCESS;
+		}
+		else if (pIRPStack->Parameters.DeviceIoControl.InputBufferLength % sizeof(MOUSE_INPUT_DATA) == 0)
+		{
+			PMOUSE_INPUT_DATA pMouInput = (PMOUSE_INPUT_DATA)pIOBuffer;
+			PMOUSE_INPUT_DATA pEndInput = pMouInput + pIRPStack->Parameters.DeviceIoControl.InputBufferLength / sizeof(MOUSE_INPUT_DATA);
+			pCtlDeviceExt->m_pfnMouseClassServiceCallback(pCtlDeviceExt->m_pMouseDeviceObject, pMouInput, pEndInput, &nInputConsumed);
+			nStatus = STATUS_SUCCESS;
+		}
+		else
 		{
 			KdPrint(("GmKMClass[控制分发函数]给的鼠标数据大小不对...\n"));
 			nStatus = STATUS_INVALID_PARAMETER;
-			goto Exit;
 		}
-		PMOUSE_INPUT_DATA pMouInput = (PMOUSE_INPUT_DATA)pIOBuffer;
-		pCtlDeviceExt->m_pfnMouseClassServiceCallback(pCtlDeviceExt->m_pMouseDeviceObject, pMouInput, pMouInput + 1, &nInputConsumed);
-		nStatus = STATUS_SUCCESS;
 	}
 	else
 	{
 		KdPrint(("GmKMClass[控制分发函数]出现了未定义的控制代码...\n"));
 		nStatus = STATUS_INVALID_PARAMETER;
-		goto Exit;
 	}
 
 Exit:
