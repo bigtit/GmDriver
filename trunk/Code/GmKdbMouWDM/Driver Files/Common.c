@@ -21,7 +21,7 @@ PDRIVER_OBJECT GetDriverObject(IN PUNICODE_STRING pDriverName)
 	}
 	else
 	{
-		KdPrint(("Can't Get Driver Object...DriverName = %wZ, nStatus = %ld", *pDriverName, nStatus));
+		KdPrint(("GmKMClass无法打开[%wZ]驱动对象， 返回错误码 = 0x%08X", *pDriverName, nStatus));
 	}
 
 	return pDriverObject;
@@ -55,7 +55,7 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 	// 如果一个键盘都没有找到
 	if (!pUsingPortDriver)
 	{
-		KdPrint(("There Is No Any Keyboard..."));
+		KdPrint(("GmKMClass[键盘]没有找到任何键盘设备...\n"));
 		return STATUS_UNSUCCESSFUL;
 	}
 
@@ -64,7 +64,7 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 	PDRIVER_OBJECT pClassDriver = GetDriverObject(&ClassDriverName);
 	if (!pClassDriver)
 	{
-		KdPrint(("Can't Not Get The Keyboard Class Driver Object..."));
+		KdPrint(("GmKMClass[键盘]打开KbdClasss驱动对象失败...\n"));
 		return STATUS_UNSUCCESSFUL;
 	}
 
@@ -87,7 +87,7 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 		{
 			if (RtlCompareUnicodeString(&pLowerDevice->AttachedDevice->DriverObject->DriverName, &ClassDriverName, TRUE) == 0)
 			{
-				KdPrint(("Find The Keyboard Target Port Device Object..."));
+				KdPrint(("GmKMClass[键盘]找到最靠近KbdClasss驱动的设备对象[%wZ]...\n", pLowerDevice->DriverObject->DriverName));
 				break;
 			}
 			pLowerDevice = pLowerDevice->AttachedDevice;
@@ -96,7 +96,7 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 		// 已经找到设备栈顶了，也没有找到最靠近KbdClasss设备对象的设备对象
 		if (!pLowerDevice->AttachedDevice)
 		{
-			KdPrint(("Can't Find The Keyboard Target Port Device Object..."));
+			KdPrint(("GmKMClass[键盘]这个设备[当前%wZ][栈顶%wZ]所处的设备栈里没有找到合适的设备对象...\n", pCurPortDevice->DriverObject->DriverName, pLowerDevice->DriverObject->DriverName));
 			continue;
 		}
 		
@@ -113,7 +113,7 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 				// 内存不合法
 				if (!MmIsAddressValid(pDeviceExtension))
 				{
-					KdPrint(("The Address Is InValid...pDeviceExtension = %p", pDeviceExtension));
+					KdPrint(("GmKMClass[键盘]这个地址[%p]不合法...\n", pDeviceExtension));
 					break;
 				}
 
@@ -122,6 +122,7 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 				// 找到一个地址，这个地址保存着一个指针，一个属于KbdClasss驱动对象的设备对象指针
 				if (pTemPtr == pCurClassDevice)
 				{
+					KdPrint(("GmKMClass[键盘]找到被保存的[%wZ]设备对象*[%p] = [%p]...\n", pCurClassDevice->DriverObject->DriverName, pDeviceExtension, pTemPtr));
 					pControlDeviceExtension->m_pKeyboradDeviceObject = pTemPtr;
 					continue;
 				}
@@ -129,6 +130,7 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 				// 先找到KbdClasss驱动的设备对象再找后面的函数指针，找到了设备指针后，找到一个地址，这个地址保存着一个函数指针，一个位于KbdClasss驱动对象的内存空间里的指针
 				if (pControlDeviceExtension->m_pKeyboradDeviceObject && IsInAddress(pTemPtr, pClassDriverStart, nClassDriverSize) && MmIsAddressValid(pTemPtr))
 				{
+					KdPrint(("GmKMClass[键盘]找到被保存的回调函数*[%p] = [%p]...\n", pDeviceExtension, pTemPtr));
 					pControlDeviceExtension->m_pfnKeyboardClassServiceCallback = *((KeyboardClassServiceCallback*)pDeviceExtension);
 					return STATUS_SUCCESS;
 				}
@@ -136,6 +138,8 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 		} // 这个KbdClass的设备对象没有被pLowerDevice的自定义扩展所保存，所以不是想要的那个设备对象，下一个KbdClass设备对象
 	} // 这个pLowerDevice设备对象就没有保存任何KbdClass设备对象，下一个端口设备对象继续找pLowerDevice
 
+	
+	KdPrint(("GmKMClass[键盘]端口驱动的所有设备所处的设备栈上都找不到合适的设备...\n"));
 	return STATUS_UNSUCCESSFUL;
 }
 
@@ -152,7 +156,7 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 	// 如果一个鼠标都没有找到
 	if (!pUsingPortDriver)
 	{
-		KdPrint(("There Is No Any Mouse..."));
+		KdPrint(("GmKMClass[鼠标]没有找到任何鼠标设备...\n"));
 		return STATUS_UNSUCCESSFUL;
 	}
 
@@ -161,7 +165,7 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 	PDRIVER_OBJECT pClassDriver = GetDriverObject(&ClassDriverName);
 	if (!pClassDriver)
 	{
-		KdPrint(("Can't Not Get The Mouse Class Driver Object..."));
+		KdPrint(("GmKMClass[鼠标]无法打开MouClasss驱动对象...\n"));
 		return STATUS_UNSUCCESSFUL;
 	}
 
@@ -184,7 +188,7 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 		{
 			if (RtlCompareUnicodeString(&pLowerDevice->AttachedDevice->DriverObject->DriverName, &ClassDriverName, TRUE) == 0)
 			{
-				KdPrint(("Find The Mouse Target Port Device Object..."));
+				KdPrint(("GmKMClass[鼠标]找到最靠近MouClasss驱动的设备对象[%wZ]...\n", pLowerDevice->DriverObject->DriverName));
 				break;
 			}
 			pLowerDevice = pLowerDevice->AttachedDevice;
@@ -193,7 +197,7 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 		// 已经找到设备栈顶了，也没有找到最靠近KbdClasss设备对象的设备对象
 		if (!pLowerDevice->AttachedDevice)
 		{
-			KdPrint(("Can't Find Mouse The Target Port Device Object..."));
+			KdPrint(("GmKMClass[鼠标]这个设备[当前%wZ][栈顶%wZ]所处的设备栈里没有找到合适的设备对象...\n", pCurPortDevice->DriverObject->DriverName, pLowerDevice->DriverObject->DriverName));
 			continue;
 		}
 
@@ -210,7 +214,7 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 				// 内存不合法
 				if (!MmIsAddressValid(pDeviceExtension))
 				{
-					KdPrint(("The Address Is InValid...pDeviceExtension = %p", pDeviceExtension));
+					KdPrint(("GmKMClass[鼠标]这个地址[%p]不合法...\n", pDeviceExtension));
 					break;
 				}
 
@@ -219,6 +223,7 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 				// 找到一个地址，这个地址保存着一个指针，一个属于KbdClasss驱动对象的设备对象指针
 				if (pTemPtr == pCurClassDevice)
 				{
+					KdPrint(("GmKMClass[鼠标]找到被保存的[%wZ]设备对象*[%p] = [%p]...\n", pCurClassDevice->DriverObject->DriverName, pDeviceExtension, pTemPtr));
 					pControlDeviceExtension->m_pMouseDeviceObject = pCurClassDevice;
 					continue;
 				}
@@ -226,6 +231,7 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 				// 先找到MouClass驱动的设备对象再找后面的函数指针，找到了设备指针后，找到一个地址，这个地址保存着一个函数指针，一个位于MouClass驱动对象的内存空间里的指针
 				if (pControlDeviceExtension->m_pMouseDeviceObject && IsInAddress(pTemPtr, pClassDriverStart, nClassDriverSize) && MmIsAddressValid(pTemPtr))
 				{
+					KdPrint(("GmKMClass[鼠标]找到被保存的回调函数*[%p] = [%p]...\n", pDeviceExtension, pTemPtr));
 					pControlDeviceExtension->m_pfnMouseClassServiceCallback = *((MouseClassServiceCallback*)pDeviceExtension);
 					return STATUS_SUCCESS;
 				}
@@ -233,5 +239,6 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 		} // 这个MouClass的设备对象没有被pLowerDevice的自定义扩展所保存，所以不是想要的那个设备对象，下一个MouClass设备对象
 	} // 这个pLowerDevice设备对象就没有保存任何MouClass设备对象，下一个端口设备对象继续找pLowerDevice
 
+	KdPrint(("GmKMClass[鼠标]端口驱动的所有设备所处的设备栈上都找不到合适的设备...\n"));
 	return STATUS_UNSUCCESSFUL;
 }
