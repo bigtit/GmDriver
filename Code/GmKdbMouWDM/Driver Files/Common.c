@@ -108,7 +108,7 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 			pControlDeviceExtension->m_pfnKeyboardClassServiceCallback = NULL;
 			// 遍历这个设备对象的自定义扩展内容，我们需要的东西就在这里面保存着
 			PCHAR pDeviceExtension = (PCHAR)pLowerDevice->DeviceExtension;
-			for (INT i = 0; i < 4096; ++i, pDeviceExtension += sizeof(PVOID))
+			for (INT i = 0; i < 4096; ++i, ++pDeviceExtension)
 			{
 				// 内存不合法
 				if (!MmIsAddressValid(pDeviceExtension))
@@ -124,7 +124,7 @@ NTSTATUS SearchKeyboardClassServiceCallbackAddress(IN PDEVICE_OBJECT pControlDev
 					continue;
 				}
 
-				PVOID pTempCallback = *((PVOID*)(pDeviceExtension + sizeof(PVOID)));
+				PVOID pTempCallback = *((PVOID*)(pDeviceExtension + sizeof(pTempDevice)));
 				if (IsInAddress(pTempCallback, pClassDriverStart, nClassDriverSize) && MmIsAddressValid(pTempCallback))
 				{
 					KdPrint(("GmKMClass[键盘]找到[%p]保存着[%wZ]设备对象[%p]和回调函数[%p]...\n", pDeviceExtension, pCurClassDevice->DriverObject->DriverName, pTempDevice, pTempCallback));
@@ -209,7 +209,7 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 			pControlDeviceExtension->m_pfnMouseClassServiceCallback = NULL;
 			// 遍历这个设备对象的自定义扩展内容，我们需要的东西就在这里面保存着
 			PCHAR pDeviceExtension = (PCHAR)pLowerDevice->DeviceExtension;
-			for (INT i = 0; i < 4096; ++i, pDeviceExtension += sizeof(PVOID))
+			for (INT i = 0; i < 4096; ++i, ++pDeviceExtension)
 			{
 				// 内存不合法
 				if (!MmIsAddressValid(pDeviceExtension))
@@ -225,7 +225,7 @@ NTSTATUS SearchMouseClassServiceCallback(IN PDEVICE_OBJECT pControlDeviceObject)
 					continue;
 				}
 
-				PVOID pTempCallback = *((PVOID*)(pDeviceExtension + sizeof(PVOID)));
+				PVOID pTempCallback = *((PVOID*)(pDeviceExtension + sizeof(pTempDevice)));
 				if (IsInAddress(pTempCallback, pClassDriverStart, nClassDriverSize) && MmIsAddressValid(pTempCallback))
 				{
 					KdPrint(("GmKMClass[鼠标]找到[%p]保存着[%wZ]设备对象[%p]和回调函数[%p]...\n", pDeviceExtension, pCurClassDevice->DriverObject->DriverName, pTempDevice, pTempCallback));
